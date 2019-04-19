@@ -34,6 +34,8 @@ class Tweet(val user: String, val text: String, val retweets: Int) {
   */
 abstract class TweetSet {
 
+  def isEmpty: Boolean
+
   /**
     * This method takes a predicate and returns a subset of all the elements
     * in the original set for which the predicate is true.
@@ -107,6 +109,9 @@ abstract class TweetSet {
 }
 
 class Empty extends TweetSet {
+
+  def isEmpty: Boolean = true
+
   def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = {
     acc
   }
@@ -115,7 +120,7 @@ class Empty extends TweetSet {
     that
   }
 
-  def mostRetweeted: Tweet = throw new UnsupportedOperationException
+  def mostRetweeted: Tweet = new Tweet("", "", -1)
 
   def descendingByRetweet: TweetList = Nil
 
@@ -134,24 +139,26 @@ class Empty extends TweetSet {
 
 class NonEmpty(elem: Tweet, left: TweetSet, right: TweetSet) extends TweetSet {
 
+  def isEmpty: Boolean = false
+
   def filterAcc(p: Tweet => Boolean, acc: TweetSet): TweetSet = {
-    if (!p(elem)) acc.incl(elem)
-    else left.filterAcc(p, right.filterAcc(p, acc))
+    val new_acc = if (p(elem)) acc.incl(elem) else acc
+    left.filterAcc(p, right.filterAcc(p, new_acc))
   }
 
   def union(that: TweetSet): TweetSet = {
-    if (!that.contains(elem)) that.incl(elem)
-    left.union(that).union(right.union(that))
+    if (this.isEmpty) that
+    else if (that.isEmpty) this
+    else that.filterAcc(t => true, this)
   }
 
   def mostRetweeted: Tweet = {
     def loop(max: Tweet, ts: TweetSet): Tweet = {
-      if (ts)
-      val l = loop(elem, left)
-      val r = loop(elem, right)
-      if (l.retweets > r.retweets) l
-      else r
+      val t = ts.mostRetweeted
+      if (t.retweets > max.retweets) t
+      else max
     }
+
     val l = loop(elem, left)
     val r = loop(elem, right)
     if (l.retweets > r.retweets) l
@@ -221,14 +228,18 @@ object GoogleVsApple {
   val google = List("android", "Android", "galaxy", "Galaxy", "nexus", "Nexus")
   val apple = List("ios", "iOS", "iphone", "iPhone", "ipad", "iPad")
 
-  lazy val googleTweets: TweetSet = ???
-  lazy val appleTweets: TweetSet = ???
+  lazy val googleTweets: TweetSet = TweetReader.allTweets.filter(t => {
+    google.exists(tag => t.text.contains(tag))
+  })
+  lazy val appleTweets: TweetSet = TweetReader.allTweets.filter(t => {
+    apple.exists(tag => t.text.contains(tag))
+  })
 
   /**
     * A list of all tweets mentioning a keyword from either apple or google,
     * sorted by the number of retweets.
     */
-  lazy val trending: TweetList = ???
+  lazy val trending: TweetList = googleTweets.union(appleTweets).descendingByRetweet
 }
 
 object Main extends App {

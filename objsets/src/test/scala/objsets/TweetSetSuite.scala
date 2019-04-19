@@ -41,6 +41,13 @@ class TweetSetSuite extends FunSuite {
 
   test("filter: 20 on set5") {
     new TestSets {
+      set3.foreach(println)
+      println()
+      set4c.foreach(println)
+      println()
+      set4d.foreach(println)
+      println()
+      set5.foreach(println)
       assert(size(set5.filter(tw => tw.retweets == 20)) === 2)
     }
   }
